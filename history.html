@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>報告履歴</title>
     
-    <script src="https://static.line-scdn.net/liff/sdk/2.2.0/liff.js"></script>
-
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f4f7f6; }
         .container { max-width: 600px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0 0 0 / 10%); }
@@ -25,8 +23,8 @@
 </head>
 <body>
     <div class="container">
-        <h1>あなたの報告履歴</h1>
-        <div id="loading" class="loading">LINE IDを取得し、履歴を読み込み中...</div>
+        <h1>報告履歴</h1>
+        <div id="loading" class="loading">履歴データを取得中...</div>
         <div id="historyList">
             </div>
         <div id="error" style="color: red; display: none;"></div>
@@ -37,32 +35,27 @@
     </div>
 
     <script>
-        // ★★★ GASのウェブアプリURLに置き換え ★★★
-        const GAS_HISTORY_URL = "https://script.google.com/macros/s/AKfycbxNIyLD0RWOidHuOLc1O60bl3n4Z0bn_zndOnUiKBRbVLk9hFA_tTug4VHc4FWoGfsK/exec"; 
-        // ★★★ あなたのLIFF IDに置き換え ★★★
-        const LIFF_ID = "2008084904-LDljg5dl";
-
-        async function initializeLiff() {
-            try {
-                await liff.init({ liffId: LIFF_ID }); 
-                
-                if (liff.isLoggedIn()) {
-                    const profile = await liff.getProfile();
-                    await fetchHistory(profile.userId); // ユーザーIDを取得したら履歴を取得
-                } else {
-                    document.getElementById('loading').textContent = '履歴を見るにはLINEログインが必要です。';
-                    liff.login();
-                }
-            } catch (err) {
-                console.error('LIFF初期化エラー:', err);
-                document.getElementById('loading').textContent = 'LIFF初期化に失敗しました。LINE Developers設定を確認してください。';
-            }
-        }
+        // ★★★ index.htmlと同じGASのウェブアプリURLに置き換え ★★★
+        const GAS_HISTORY_URL = "https://script.google.com/macros/s/AKfycbzWZb84cDiXSFrpwBoOvTB3_ZreZf4s5FUs1j72YDvD_yh6XGpZWyCselDE_xGu949J/exec"; 
         
-        async function fetchHistory(userId) {
-            document.getElementById('loading').textContent = '履歴を読み込み中...';
-            // ユーザーIDをクエリパラメータとしてGASに送信
-            const url = `${GAS_HISTORY_URL}?userId=${userId}`; // ★★★ ユーザーIDを付けてGETリクエスト
+        // URLのクエリパラメータから名前を取得する
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        async function fetchHistory() {
+            const selectedName = getQueryParam('name');
+
+            if (!selectedName) {
+                document.getElementById('loading').textContent = '履歴を見るには、フォームからお子さまの名前を選択してアクセスしてください。';
+                return;
+            }
+
+            document.getElementById('loading').textContent = `${selectedName} さんの履歴を読み込み中...`;
+            
+            // ユーザーIDではなく、名前(name)をクエリパラメータとしてGASに送信
+            const url = `${GAS_HISTORY_URL}?targetName=${encodeURIComponent(selectedName)}`; 
             
             try {
                 const response = await fetch(url);
@@ -75,7 +68,7 @@
                 console.error("履歴取得エラー:", error);
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('error').style.display = 'block';
-                document.getElementById('error').textContent = `データ取得エラー: ${error.message}。GASのURLやデプロイ設定を確認してください。`;
+                document.getElementById('error').textContent = `データ取得エラー: ${error.message}。GASのURLとデプロイ設定を確認してください。`;
             }
         }
 
@@ -85,10 +78,11 @@
             listContainer.innerHTML = '';
 
             if (data.length === 0) {
-                listContainer.textContent = '現在、あなたの報告データはありません。';
+                listContainer.textContent = '現在、報告されたデータはありません。';
                 return;
             }
 
+            // データはすでに名前でフィルタリングされているため、そのまま表示
             data.forEach(child => {
                 const card = document.createElement('div');
                 card.className = 'child-card';
@@ -116,7 +110,7 @@
             });
         }
 
-        initializeLiff();
+        fetchHistory();
     </script>
 </body>
 </html>
