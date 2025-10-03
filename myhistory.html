@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>報告履歴</title>
+    
+    <script src="https://static.line-scdn.net/liff/sdk/2.2.0/liff.js"></script>
+
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f4f7f6; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0 0 0 / 10%); }
+        h1 { border-bottom: 2px solid #00c300; padding-bottom: 5px; color: #333; }
+        .child-card { border: 1px solid #ccc; border-radius: 6px; margin-bottom: 20px; padding: 15px; }
+        .child-name { font-size: 1.3em; font-weight: bold; margin-bottom: 10px; color: #008000; }
+        .record { border-left: 3px solid #eee; padding-left: 10px; margin-bottom: 8px; font-size: 0.9em; }
+        .absence { border-left: 3px solid #ff0000; background-color: #fff0f0; padding: 10px; border-radius: 4px; }
+        .loading { text-align: center; color: #999; }
+        .secondary-btn { 
+            display: block; width: 100%; padding: 10px; margin-top: 15px; 
+            background-color: #f0f0f0; border: 1px solid #ccc; color: #333; 
+            border-radius: 4px; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>あなたの報告履歴</h1>
+        <div id="loading" class="loading">LINE IDを取得し、履歴を読み込み中...</div>
+        <div id="historyList">
+            </div>
+        <div id="error" style="color: red; display: none;"></div>
+        
+        <a href="index.html">
+            <button type="button" class="secondary-btn">報告フォームに戻る</button>
+        </a>
+    </div>
+
+    <script>
+        // ★★★ GASのウェブアプリURLに置き換え ★★★
+        const GAS_HISTORY_URL = "YOUR_GAS_WEB_APP_URL"; 
+        // ★★★ あなたのLIFF IDに置き換え ★★★
+        const LIFF_ID = "YOUR_LIFF_ID";
+
+        async function initializeLiff() {
+            try {
+                await liff.init({ liffId: LIFF_ID }); 
+                
+                if (liff.isLoggedIn()) {
+                    const profile = await liff.getProfile();
+                    await fetchHistory(profile.userId); // ユーザーIDを取得したら履歴を取得
+                } else {
+                    document.getElementById('loading').textContent = '履歴を見るにはLINEログインが必要です。';
+                    liff.login();
+                }
+            } catch (err) {
+                console.error('LIFF初期化エラー:', err);
+                document.getElementById('loading').textContent = 'LIFF初期化に失敗しました。LINE Developers設定を確認してください。';
+            }
+        }
+        
+        async function fetchHistory(userId) {
+            document.getElementById('loading').textContent = '履歴を読み込み中...';
+            // ユーザーIDをクエリパラメータとしてGASに送信
+            const url = `${GAS_HISTORY_URL}?userId=${userId}`; // ★★★ ユーザーIDを付けてGETリクエスト
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                renderHistory(data);
+            } catch (error) {
+                console.error("履歴取得エラー:", error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').textContent = `データ取得エラー: ${error.message}。GASのURLやデプロイ設定を確認してください。`;
+            }
+        }
+
+        function renderHistory(data) {
+            document.getElementById('loading').style.display = 'none';
+            const listContainer = document.getElementById('historyList');
+            listContainer.innerHTML = '';
+
+            if (data.length === 0) {
+                listContainer.textContent = '現在、あなたの報告データはありません。';
+                return;
+            }
+
+            data.forEach(child => {
+                const card = document.createElement('div');
+                card.className = 'child-card';
+                
+                const nameHeader = document.createElement('div');
+                nameHeader.className = 'child-name';
+                nameHeader.textContent = `${child.name} さんの報告履歴 (${child.records.length}件)`;
+                card.appendChild(nameHeader);
+
+                child.records.forEach(record => {
+                    const recordDiv = document.createElement('div');
+                    recordDiv.className = record.isAbsence ? 'record absence' : 'record';
+                    
+                    const absenceText = record.isAbsence ? '【欠席の可能性あり】' : '【登園】';
+                    
+                    recordDiv.innerHTML = `
+                        <strong>${record.date}</strong><br>
+                        体調: ${record.condition} ${absenceText}<br>
+                        連絡: ${record.content}
+                    `;
+                    card.appendChild(recordDiv);
+                });
+                
+                listContainer.appendChild(card);
+            });
+        }
+
+        initializeLiff();
+    </script>
+</body>
+</html>
