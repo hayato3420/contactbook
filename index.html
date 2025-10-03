@@ -7,31 +7,7 @@
     
     <link rel="stylesheet" href="style.css">
     
-    <script src="https://static.line-scdn.net/liff/sdk/2.2.0/liff.js"></script>
-    
-    <script>
-        // LIFF初期化とID取得 (フォーム送信時のみ利用)
-        async function initializeLiff() {
-            try {
-                // ★★★ あなたのLIFF IDに置き換え ★★★
-                await liff.init({ liffId: '2008084904-LDljg5dl' }); 
-                
-                if (liff.isLoggedIn()) {
-                    const profile = await liff.getProfile();
-                    // 取得したユーザーIDを隠しフィールドにセット
-                    const userIdInputElement = document.getElementById('userIdInput');
-                    if(userIdInputElement) userIdInputElement.value = profile.userId;
-                } else {
-                    liff.login();
-                }
-            } catch (err) {
-                console.error('LIFF初期化エラー:', err);
-            }
-        }
-        
-        initializeLiff();
-    </script>
-</head>
+    </head>
 <body>
     <div class="wrap">
         <div class="card">
@@ -76,8 +52,6 @@
                     <textarea id="contentInput" required placeholder="例）薬を持たせました。お迎えは17:30予定です。"></textarea>
                 </div>
                 
-                <input type="hidden" id="userIdInput" name="userId" value="" />
-                
                 <button id="submitBtn" type="submit">送信する</button>
             </form>
             
@@ -89,7 +63,7 @@
 
     <script>
         // ★★★ あなたのGASのURLに置き換え ★★★
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzWZb84cDiXSFrpwBoOvTB3_ZreZf4s5FUs1j72YDvD_yh6XGpZWyCselDE_xGu949J/exec";
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyL58mf5snKXjLob8BSfDPl1gsn_qgemdo5btQwhMai1TzzlaA8q95KPfc9-3uttos/exec";
         // =========================================
 
         const form = document.getElementById('reportForm');
@@ -120,7 +94,7 @@
             const temp = document.getElementById('tempInput').value;
             const condition = document.getElementById('conditionInput').value;
             const content = document.getElementById('contentInput').value;
-            const userId = document.getElementById('userIdInput').value; 
+            // userIdの取得は削除
 
             if (!name || !temp || !condition || !content) {
                 showAlert("すべての項目を選択・入力してください。");
@@ -128,15 +102,9 @@
                 submitBtn.textContent = '送信する';
                 return;
             }
-
-            if (!userId) {
-                showAlert("LINE IDの取得に失敗しました。LINE Developers設定を確認してください。");
-                submitBtn.disabled = false;
-                submitBtn.textContent = '送信する';
-                return;
-            }
             
-            const payload = { name, temp, condition, content, userId };
+            // payloadからuserIdを削除
+            const payload = { name, temp, condition, content }; 
 
             try {
                 const res = await fetch(GAS_WEB_APP_URL, {
