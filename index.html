@@ -1,134 +1,180 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>連絡帳フォーム</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>連絡帳フォーム</title>
+    
     <link rel="stylesheet" href="style.css">
+    
+    <script src="https://static.line-scdn.net/liff/sdk/2.2.0/liff.js"></script>
+    
+    <script>
+        // LIFF初期化とID取得 (フォーム送信時のみ利用)
+        async function initializeLiff() {
+            try {
+                // ★★★ あなたのLIFF IDに置き換え ★★★
+                await liff.init({ liffId: '2008084904-LDljg5dl' }); 
+                
+                if (liff.isLoggedIn()) {
+                    const profile = await liff.getProfile();
+                    // 取得したユーザーIDを隠しフィールドにセット
+                    const userIdInputElement = document.getElementById('userIdInput');
+                    if(userIdInputElement) userIdInputElement.value = profile.userId;
+                } else {
+                    liff.login();
+                }
+            } catch (err) {
+                console.error('LIFF初期化エラー:', err);
+            }
+        }
+        
+        initializeLiff();
+    </script>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h1>連絡帳フォーム</h1>
-      <p class="desc">朝の体調や連絡事項を入力して送信してください。</p>
+    <div class="wrap">
+        <div class="card">
+            <h1>連絡帳フォーム</h1>
+            <p class="desc">朝の体調や連絡事項を入力して送信してください。</p>
 
-      <div id="alert" class="err"></div>
-      <div id="ok" class="ok"></div>
+            <div id="alert" class="err"></div>
+            <div id="ok" class="ok"></div>
 
-      <form id="reportForm">
-        <div class="row">
-          <label for="nameInput">お子さまの名前</label>
-          <input type="text" id="nameInput" required placeholder="例）たろう" />
-        </div>
+            <form id="reportForm">
+                <div class="row">
+                    <label for="nameInput">お子さまの名前</label>
+                    <select id="nameInput" required>
+                        <option value="">選択してください</option>
+                        <option value="佐藤太郎">佐藤太郎</option>
+                        <option value="田中花子">田中花子</option>
+                        <option value="山本一郎">山本一郎</option>
+                        <option value="小林次郎">小林次郎</option>
+                        <option value="渡辺三郎">渡辺三郎</option>
+                    </select>
+                </div>
 
-        <div class="row">
-          <label for="tempInput">体温（℃）</label>
-          <input type="number" id="tempInput" step="0.1" min="34" max="41" placeholder="例: 36.8" required />
-        </div>
-        
-        <div class="row">
-          <label for="conditionInput">体調</label>
-          <select id="conditionInput" required>
-            <option value="">選択してください</option>
-            <option>元気</option>
-            <option>少しだるい</option>
-            <option>咳・鼻水あり</option>
-            <option>発熱あり</option>
-            <option>その他</option>
-          </select>
-        </div>
-        
-        <div class="row">
-          <label for="contentInput">連絡したい内容</label>
-          <textarea id="contentInput" required placeholder="例）薬を持たせました。お迎えは17:30予定です。"></textarea>
-        </div>
-        
-        <button id="submitBtn" type="submit">送信する</button>
-      </form>
-              <a href="myhistory.html" class="history-button">
-                <button type="button" class="secondary-btn">
-                    自分の報告履歴を見る
-                </button>
-            </a>
+                <div class="row">
+                    <label for="tempInput">体温（℃）</label>
+                    <input type="number" id="tempInput" step="0.1" min="34" max="41" placeholder="例: 36.8" required />
+                </div>
+                
+                <div class="row">
+                    <label for="conditionInput">体調</label>
+                    <select id="conditionInput" required>
+                        <option value="">選択してください</option>
+                        <option>元気</option>
+                        <option>少しだるい</option>
+                        <option>咳・鼻水あり</option>
+                        <option>発熱あり</option>
+                        <option>その他</option>
+                    </select>
+                </div>
+                
+                <div class="row">
+                    <label for="contentInput">連絡したい内容</label>
+                    <textarea id="contentInput" required placeholder="例）薬を持たせました。お迎えは17:30予定です。"></textarea>
+                </div>
+                
+                <input type="hidden" id="userIdInput" name="userId" value="" />
+                
+                <button id="submitBtn" type="submit">送信する</button>
+            </form>
+            
+            <button type="button" class="secondary-btn" id="historyBtn">
+                自分の報告履歴を見る
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ★★★ あなたのGASのURLに置き換え ★★★
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzWZb84cDiXSFrpwBoOvTB3_ZreZf4s5FUs1j72YDvD_yh6XGpZWyCselDE_xGu949J/exec";
+        // =========================================
+
+        const form = document.getElementById('reportForm');
+        const alertBox = document.getElementById('alert');
+        const okBox = document.getElementById('ok');
+        const submitBtn = document.getElementById('submitBtn');
+        const historyBtn = document.getElementById('historyBtn');
+
+        function showAlert(msg){ 
+            alertBox.textContent = msg;
+            alertBox.style.display = msg ? 'block' : 'none';
+            okBox.style.display = 'none';
+        }
+        function showOk(msg){ 
+            okBox.textContent = msg;
+            okBox.style.display = 'block';
+            alertBox.style.display = 'none';
+        }
+
+        // フォーム送信処理
+        form.addEventListener('submit', async (e)=>{
+            e.preventDefault();
+            showAlert('');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '送信中…';
+
+            const name = document.getElementById('nameInput').value;
+            const temp = document.getElementById('tempInput').value;
+            const condition = document.getElementById('conditionInput').value;
+            const content = document.getElementById('contentInput').value;
+            const userId = document.getElementById('userIdInput').value; 
+
+            if (!name || !temp || !condition || !content) {
+                showAlert("すべての項目を選択・入力してください。");
+                submitBtn.disabled = false;
+                submitBtn.textContent = '送信する';
+                return;
+            }
+
+            if (!userId) {
+                showAlert("LINE IDの取得に失敗しました。LINE Developers設定を確認してください。");
+                submitBtn.disabled = false;
+                submitBtn.textContent = '送信する';
+                return;
+            }
+            
+            const payload = { name, temp, condition, content, userId };
+
+            try {
+                const res = await fetch(GAS_WEB_APP_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await res.json();
+                if (result.result === 'error') {
+                     throw new Error('サーバー処理エラー: ' + result.message);
+                }
+
+                showOk("送信しました。");
+                document.getElementById('reportForm').reset();
+                
+            } catch(err){
+                console.error('送信エラー:', err);
+                showAlert('送信に失敗しました。URLや通信環境をご確認ください。');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '送信する';
+            }
+        });
         
-    </div>
-  </div>
-
-  <script>
-    // ====== あなたのGASのURLに置き換える ======
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxNIyLD0RWOidHuOLc1O60bl3n4Z0bn_zndOnUiKBRbVLk9hFA_tTug4VHc4FWoGfsK/exec";
-    // =========================================
-
-    // ★★★ フォームの送信処理は、エラーメッセージ表示も行う最新版を使用します ★★★
-    const form = document.getElementById('reportForm');
-    const alertBox = document.getElementById('alert');
-    const okBox = document.getElementById('ok');
-    const submitBtn = document.getElementById('submitBtn');
-
-    // エラーメッセージ表示
-    function showAlert(msg){
-      alertBox.textContent = msg;
-      alertBox.style.display = msg ? 'block' : 'none';
-      okBox.style.display = 'none';
-    }
-    // 成功メッセージ表示
-    function showOk(msg){
-      okBox.textContent = msg;
-      okBox.style.display = 'block';
-      alertBox.style.display = 'none';
-    }
-
-    // フォーム送信時の処理
-    form.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      showAlert('');
-      submitBtn.disabled = true;
-      submitBtn.textContent = '送信中…';
-
-      // 1. 入力値の取得
-      const name = document.getElementById('nameInput').value;
-      const temp = document.getElementById('tempInput').value;
-      const condition = document.getElementById('conditionInput').value;
-      const content = document.getElementById('contentInput').value;
-
-      // 必須入力チェック
-      if (!name || !temp || !condition || !content) {
-          showAlert("すべての項目を入力してください。");
-          submitBtn.disabled = false;
-          submitBtn.textContent = '送信する';
-        return;
-      }
-
-      // 2. 送信するデータをJSON形式で準備
-      const payload = {
-        name: name,
-        temp: temp,
-        condition: condition,
-        content: content
-      };
-
-      // 3. GASのdoPost関数にデータを送信（fetch APIを使用）
-      try {
-        const res = await fetch(GAS_WEB_APP_URL, {
-          method: 'POST',
-          // no-corsは不要な場合もありますが、確実性を高めるため残します
-          mode: 'no-cors', 
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        
-        // 成功とみなし、メッセージを表示してフォームをクリア（no-corsモードのため、res.json()は実行しません）
-        showOk("送信しました。ご入力ありがとうございます。");
-        document.getElementById('reportForm').reset();
-        
-      } catch(err){
-        console.error('送信エラー:', err);
-        showAlert('送信に失敗しました。URLや通信環境をご確認ください。');
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = '送信する';
-      }
-    });
-  </script>
+        // 履歴ボタン処理
+        historyBtn.addEventListener('click', () => {
+            const nameInput = document.getElementById('nameInput');
+            const selectedName = nameInput.value;
+            
+            if (!selectedName) {
+                showAlert("履歴を見るには、まずお子さまの名前を選択してください。");
+                return;
+            }
+            
+            // 選択された名前をクエリパラメータとして history.html に渡す
+            window.location.href = `history.html?name=${encodeURIComponent(selectedName)}`;
+        });
+    </script>
 </body>
 </html>
